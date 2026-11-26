@@ -28,6 +28,14 @@ try {
     process.exit(1);
 }
 
+let tripPromptTemplate;
+try {
+    tripPromptTemplate = fs.readFileSync('trip-prompt.md', 'utf8');
+} catch (error) {
+    console.error('Error reading trip-prompt.md:', error);
+    process.exit(1);
+}
+
 const OPENAI_API_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
 const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
@@ -81,6 +89,75 @@ app.post('/api/', async (req, res) => {
     }
 });
 
+// 入力条件から日帰りの立ち寄りプランを作る専用エンドポイント
+app.post('/api/trip', async (req, res) => {
+    try {
+        const { area, hours, budget, style, request = '' } = req.body;
+        const cleanArea = typeof area === 'string' ? area.trim() : '';
+        const cleanRequest = typeof request === 'string' ? request.trim() : '';
+        const cleanStyle = typeof style === 'string' ? style.trim() : '';
+        const numericHours = Number(hours);
+        const numericBudget = Number(budget);
+
+        if (!cleanArea || cleanArea.length > 100) {
+            return res.status(400).json({ error: '行き先は1〜100文字で入力してください。' });
+        }
+        if (!Number.isInteger(numericHours) || numericHours < 2 || numericHours > 12) {
+            return res.status(400).json({ error: '時間は2〜12時間で指定してください。' });
+        }
+        if (!Number.isInteger(numericBudget) || numericBudget < 0 || numericBudget > 100000) {
+            return res.status(400).json({ error: '予算は0〜100,000円で指定してください。' });
+        }
+        if (!cleanStyle || cleanStyle.length > 40 || cleanRequest.length > 240) {
+            return res.status(400).json({ error: 'スタイルまたは追加リクエストの文字数を確認してください。' });
+        }
+
+        const finalPrompt = fillTemplate(tripPromptTemplate, {
+            area: cleanArea,
+            hours: numericHours,
+            budget: numericBudget,
+            style: cleanStyle,
+            request: cleanRequest || '特になし',
+        });
+        const tripData = await callOpenAIJSON(finalPrompt);
+        const itinerary = tripData?.itinerary;
+
+        if (!tripData || typeof tripData !== 'object' || Array.isArray(tripData) ||
+            Object.keys(tripData).length !== 1 ||
+            !Array.isArray(itinerary) || itinerary.length < 3 || itinerary.length > 6 ||
+            !itinerary.every(isValidTripStop)) {
+            throw new Error('The generated itinerary did not match the required JSON structure.');
+        }
+
+        res.json({ data: itinerary });
+    } catch (error) {
+        if (error.status) {
+            console.error(`Trip API provider returned HTTP ${error.status}.`);
+        } else {
+            console.error('Trip API Error:', error.message);
+        }
+        if (!process.env.OPENAI_API_KEY || error.status === 401) {
+            return res.status(503).json({
+                error: 'OpenAI APIキーが未設定または無効です。.env.local の OPENAI_API_KEY を確認してサーバーを再起動してください。',
+            });
+        }
+        if (error.status === 429) {
+            return res.status(503).json({ error: 'OpenAI APIの利用上限に達しました。APIの利用状況を確認してください。' });
+        }
+        if (error.status === 400) {
+            return res.status(503).json({ error: 'OpenAI APIのリクエストが拒否されました。モデル設定を確認してください。' });
+        }
+        res.status(500).json({ error: 'プランを作れませんでした。少し待ってからもう一度お試しください。' });
+    }
+});
+
+function isValidTripStop(stop) {
+    const fields = ['time', 'title', 'description', 'location', 'estimatedCost', 'category', 'tip'];
+    return stop && typeof stop === 'object' && !Array.isArray(stop) &&
+        Object.keys(stop).length === fields.length &&
+        fields.every(key => typeof stop[key] === 'string' && stop[key].trim().length > 0);
+}
+
 // prompt.md 内の ${key} を variables の値で安全に置換する
 function fillTemplate(template, variables) {
     return template.replace(/\$\{(\w+)\}/g, (match, key) => {
@@ -91,6 +168,11 @@ function fillTemplate(template, variables) {
 }
 
 async function callOpenAI(prompt) {
+    const parsedData = await callOpenAIJSON(prompt, 8192);
+    return extractArrayFromObject(parsedData);
+}
+
+async function callOpenAIJSON(prompt, maxCompletionTokens = 8192) {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
         throw new Error('OPENAI_API_KEY environment variable is not set');
@@ -107,19 +189,35 @@ async function callOpenAI(prompt) {
             messages: [
                 { role: 'system', content: prompt }
             ],
-            max_completion_tokens: 2000,
+            max_completion_tokens: maxCompletionTokens,
             response_format: { type: "json_object" }
         })
     });
 
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error?.message || 'OpenAI API error');
+        const error = new Error(`OpenAI API request failed with status ${response.status}.`);
+        error.status = response.status;
+        throw error;
     }
 
     const data = await response.json();
-    const responseText = data.choices[0].message.content;
-    return extractArray(responseText);
+    const completion = data.choices?.[0];
+    const responseText = completion?.message?.content;
+    if (completion?.finish_reason === 'length') {
+        const error = new Error('OpenAI reached the completion token limit before finishing the response.');
+        error.code = 'OUTPUT_LIMIT_REACHED';
+        throw error;
+    }
+    if (typeof responseText !== 'string' || !responseText.trim()) {
+        const error = new Error(`OpenAI returned no message content (finish_reason: ${completion?.finish_reason || 'unknown'}).`);
+        error.code = 'EMPTY_COMPLETION';
+        throw error;
+    }
+    try {
+        return JSON.parse(responseText);
+    } catch (parseError) {
+        throw new Error('Failed to parse LLM response: ' + parseError.message);
+    }
 }
 
 async function callGemini(prompt) {
@@ -164,6 +262,14 @@ function extractArray(responseText) {
         parsedData = JSON.parse(responseText);
     } catch (parseError) {
         throw new Error('Failed to parse LLM response: ' + parseError.message);
+    }
+
+    return extractArrayFromObject(parsedData);
+}
+
+function extractArrayFromObject(parsedData) {
+    if (!parsedData || typeof parsedData !== 'object' || Array.isArray(parsedData)) {
+        throw new Error('The LLM response must be a JSON object.');
     }
 
     const arrayData = Object.values(parsedData).find(Array.isArray);

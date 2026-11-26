@@ -1,44 +1,66 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>アプリ一覧</title>
-    <style>
-        body { font-family: sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; color: #333; }
-        h1 { font-size: 1.4rem; }
-        ul { list-style: none; padding: 0; }
-        li { padding: 12px 0; border-bottom: 1px solid #eee; }
-        a { font-size: 1.1rem; text-decoration: none; color: #0366d6; }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f5f0">
+  <title>小さなAIアプリ | アプリ一覧</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 56px 22px; color: #263832; background: #f5f5f0; font-family: "Noto Sans JP", sans-serif; }
+    main { max-width: 760px; margin: auto; }
+    .eyebrow { margin: 0 0 9px; color: #79917b; font-size: 10px; font-weight: 700; letter-spacing: .18em; }
+    h1 { margin: 0; font-size: clamp(27px, 5vw, 38px); letter-spacing: .02em; }
+    .lead { margin: 12px 0 30px; color: #78857b; font-size: 13px; line-height: 1.8; }
+    ul { display: grid; gap: 13px; padding: 0; list-style: none; }
+    li a { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px 23px; border: 1px solid #e5e8df; border-radius: 12px; color: inherit; background: #fffefa; text-decoration: none; transition: transform .16s, border-color .16s, box-shadow .16s; }
+    li a:hover { transform: translateY(-2px); border-color: #b6c9b6; box-shadow: 0 8px 25px #344d3610; }
+    .card-copy { display: grid; gap: 5px; }.card-title { font-weight: 700; font-size: 15px; }.card-description { color: #89948b; font-size: 11px; line-height: 1.6; }
+    .card-icon { display: grid; flex: none; place-items: center; width: 44px; height: 44px; border-radius: 11px; color: #527659; background: #edf2e9; font-size: 20px; }
+    .arrow { flex: none; color: #7a987e; font-size: 18px; }
+    .empty { padding: 20px; border: 1px dashed #cdd7cb; border-radius: 10px; color: #879287; background: #fffefa; }
+    footer { margin-top: 35px; color: #9aa49a; font-size: 10px; }
+    @media (max-width: 480px) { body { padding: 38px 17px; } li a { padding: 17px; } }
+  </style>
 </head>
 <body>
-    <h1>アプリ一覧</h1>
-    <ul id="appList"></ul>
-
-    <script>
-        // サーバーから .html ファイルの一覧を取得してリンクを表示する
-        async function loadPages() {
-            const response = await fetch('/api/pages');
-            const files = await response.json();
-
-            const list = document.getElementById('appList');
-            if (files.length === 0) {
-                list.innerHTML = '<li>public/ に .html ファイルがありません。</li>';
-                return;
-            }
-
-            files.forEach(name => {
-                const li = document.createElement('li');
-                const a = document.createElement('a');
-                a.href = name;
-                a.textContent = name;
-                li.appendChild(a);
-                list.appendChild(li);
-            });
+  <main>
+    <p class="eyebrow">SMALL IDEAS, MADE WITH AI</p>
+    <h1>小さなAIアプリ</h1>
+    <p class="lead">テーマや条件を入力して、AIが作るデータを体験してみましょう。</p>
+    <ul id="appList" aria-label="アプリ一覧"></ul>
+    <footer>Powered by OpenAI · generic-webapi</footer>
+  </main>
+  <script>
+    const descriptions = {
+      'yorimichi.html': ['よりみち旅', '行き先と気分から、あなただけの日帰りおでかけプランを作成。', '↗'],
+      'quiz.html': ['ITパスポート対策クイズ', '好きな問題数で、試験対策クイズにチャレンジ。', '?']
+    };
+    async function loadPages() {
+      const list = document.getElementById('appList');
+      try {
+        const response = await fetch('/api/pages');
+        if (!response.ok) throw new Error('ページ一覧を取得できませんでした');
+        const files = await response.json();
+        if (!files.length) {
+          const empty = document.createElement('li'); empty.className = 'empty'; empty.textContent = 'アプリはまだありません。'; list.append(empty); return;
         }
-
-        loadPages();
-    </script>
+        files.forEach((file) => {
+          const [title, description, icon] = descriptions[file] || [file.replace('.html', ''), 'AIで生成したデータを使うアプリ。', '✦'];
+          const item = document.createElement('li');
+          const link = document.createElement('a'); link.href = file;
+          const badge = document.createElement('span'); badge.className = 'card-icon'; badge.textContent = icon;
+          const copy = document.createElement('span'); copy.className = 'card-copy';
+          const name = document.createElement('span'); name.className = 'card-title'; name.textContent = title;
+          const detail = document.createElement('span'); detail.className = 'card-description'; detail.textContent = description;
+          const arrow = document.createElement('span'); arrow.className = 'arrow'; arrow.textContent = '→';
+          copy.append(name, detail); link.append(badge, copy, arrow); item.append(link); list.append(item);
+        });
+      } catch (error) {
+        const empty = document.createElement('li'); empty.className = 'empty'; empty.textContent = error.message; list.append(empty);
+      }
+    }
+    loadPages();
+  </script>
 </body>
 </html>

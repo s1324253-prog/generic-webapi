@@ -2,6 +2,26 @@
 
 A flexible Node.js web API that allows you to create LLM-powered applications by simply editing a Markdown prompt file. No code changes required for different use cases.
 
+## よりみち旅（AI日帰りプランナー）
+
+このプロジェクトには、入力した行き先・時間・予算・気分に合わせて、AIが日帰りのおでかけプランを作るWebアプリを追加しています。
+
+1. `.env.local` に `OPENAI_API_KEY` を設定して `npm start` を実行します。
+2. ブラウザーで `http://localhost:8080` を開き、「よりみち旅」を選びます。
+3. 条件を入力してプランを作成します。生成したプランはタイムラインで確認でき、JSONも展開して見られます。
+
+`POST /api/trip` は `trip-prompt.md` の指示と入力条件を OpenAI API に送り、`{"itinerary":[...]}` 形式のJSONを求めます。サーバーで応答を `JSON.parse()` し、各スポットの項目を確認してから画面へ返します。プロンプトとUIはクイズアプリから独立しているため、既存の `quiz.html` も引き続き利用できます。
+
+各スポットには `time`、`title`、`description`、`location`、`estimatedCost`、`category`、`tip` を含みます。費用や施設情報はAIによる目安です。
+
+### Renderへデプロイ
+
+1. このリポジトリをGitHubへpushし、Renderで **New → Blueprint** からリポジトリを接続します。
+2. ルートの `render.yaml` を使ってデプロイします。Build Command は `npm ci`、Start Command は `npm start` です。
+3. Renderの初回セットアップで `OPENAI_API_KEY` を入力します。`.env.local` はGitに含めず、RenderのEnvironmentにもキーを登録してください。
+
+デプロイ完了後、Renderが発行する `onrender.com` URLを共有できます。Freeプランは一定時間アクセスがないと停止するため、最初のアクセス時に起動待ちが発生することがあります。
+
 ## Features
 
 - 🎯 **Generic Design**: One API endpoint for any LLM application

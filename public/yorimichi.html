@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f4ef">
+  <meta name="description" content="行き先と気分を入れるだけ。AIがあなただけの日帰りよりみちプランを作ります。">
+  <title>よりみち旅 | AIおでかけプランナー</title>
+  <link rel="stylesheet" href="yorimichi.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="アプリ一覧へ">
+      <span class="brand-mark" aria-hidden="true">↗</span>
+      <span>よりみち旅</span>
+    </a>
+    <span class="top-note"><span class="live-dot"></span> AI TRIP PLANNER</span>
+  </header>
+
+  <main class="page-shell">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow">YOUR NEXT LITTLE ADVENTURE</p>
+        <h1 id="hero-title">今日はどこへ、<br>よりみちしよう。</h1>
+        <p class="hero-lead">行き先と気分を教えてください。<br>AIが、あなたにちょうどいい一日を組み立てます。</p>
+        <div class="hero-tags"><span>⌁ 気ままに</span><span>◷ 日帰り</span><span>✳ あなただけのプラン</span></div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="sun"></div><div class="hill hill-back"></div><div class="hill hill-front"></div>
+        <div class="route route-one"></div><div class="route route-two"></div>
+        <span class="art-pin pin-one">✦</span><span class="art-pin pin-two">●</span>
+        <span class="art-label">take the scenic route</span>
+      </div>
+    </section>
+
+    <section class="planner-card" aria-labelledby="form-title">
+      <div class="section-heading">
+        <div><p class="eyebrow">PLAN YOUR DAY</p><h2 id="form-title">おでかけの条件</h2></div>
+        <span class="step-label"><span>01</span> — 02</span>
+      </div>
+      <form id="tripForm">
+        <div class="form-grid">
+          <label class="field field-wide" for="area">
+            <span class="field-label"><span class="field-icon">⌖</span> 行き先・エリア</span>
+            <input id="area" name="area" type="text" maxlength="100" placeholder="例：鎌倉、神戸、札幌" required>
+            <span class="field-hint">行きたい街や、気になるエリアを入力</span>
+          </label>
+
+          <label class="field" for="hours">
+            <span class="field-label"><span class="field-icon">◷</span> 使える時間</span>
+            <span class="select-wrap"><select id="hours" name="hours">
+              <option value="3">3時間</option><option value="4">4時間</option><option value="5" selected>5時間</option>
+              <option value="6">6時間</option><option value="8">8時間</option><option value="10">10時間</option><option value="12">12時間</option>
+            </select></span>
+          </label>
+
+          <label class="field" for="budget">
+            <span class="field-label"><span class="field-icon">￥</span> ひとりの予算</span>
+            <span class="select-wrap"><select id="budget" name="budget">
+              <option value="3000">3,000円くらい</option><option value="5000" selected>5,000円くらい</option>
+              <option value="8000">8,000円くらい</option><option value="12000">12,000円くらい</option><option value="20000">20,000円くらい</option>
+            </select></span>
+          </label>
+
+          <fieldset class="field field-wide style-field">
+            <legend class="field-label"><span class="field-icon">✳</span> 今日はどんな気分？</legend>
+            <div class="style-options">
+              <label class="style-option"><input type="radio" name="style" value="のんびり、静かな場所で過ごしたい" checked><span>☁️ のんびり</span></label>
+              <label class="style-option"><input type="radio" name="style" value="おいしいものを食べ歩きたい"><span>🥐 食べ歩き</span></label>
+              <label class="style-option"><input type="radio" name="style" value="自然や景色を楽しみたい"><span>🌿 自然を満喫</span></label>
+              <label class="style-option"><input type="radio" name="style" value="街を歩いて新しい発見をしたい"><span>🏘️ 街を探検</span></label>
+              <label class="style-option"><input type="radio" name="style" value="アートや文化に触れたい"><span>🎨 アート・文化</span></label>
+            </div>
+          </fieldset>
+
+          <label class="field field-wide" for="request">
+            <span class="field-label"><span class="field-icon">＋</span> 追加の希望 <span class="optional">任意</span></span>
+            <input id="request" name="request" type="text" maxlength="240" placeholder="例：ひとり旅、駅から歩ける範囲、甘いものが食べたい">
+          </label>
+        </div>
+
+        <div class="form-bottom">
+          <p class="privacy-note">入力内容はプラン作成のためだけに使われます。</p>
+          <button class="submit-button" id="submitButton" type="submit"><span>よりみちプランをつくる</span><span class="button-arrow">↗</span></button>
+        </div>
+      </form>
+    </section>
+
+    <section id="resultSection" class="result-section" aria-live="polite" hidden>
+      <div id="loadingState" class="loading-card" hidden>
+        <div class="loader-orbit"><span></span><span></span><span></span></div>
+        <p class="eyebrow">MAKING YOUR ROUTE</p>
+        <h2>よりみちを組み立てています…</h2>
+        <p>街のこと、移動のこと、あなたの気分を考え中。</p>
+      </div>
+      <div id="errorState" class="error-card" role="alert" hidden>
+        <span class="error-icon">!</span><div><h2>プランを作れませんでした</h2><p id="errorMessage"></p></div>
+      </div>
+      <div id="planResult" hidden>
+        <div class="result-heading">
+          <div><p class="eyebrow">YOUR DAY, YOUR WAY</p><h2><span id="resultArea"></span>のよりみちプラン</h2><p class="result-summary" id="resultSummary"></p></div>
+          <button class="text-button" id="copyButton" type="button">▣ <span>プランをコピー</span></button>
+        </div>
+        <div class="plan-meta" id="planMeta"></div>
+        <div class="timeline" id="timeline"></div>
+        <details class="json-details">
+          <summary>生成されたJSONを見る</summary>
+          <pre id="jsonOutput"></pre>
+        </details>
+        <p class="disclaimer">費用や営業時間は目安です。お出かけ前に各施設の最新情報をご確認ください。</p>
+      </div>
+    </section>
+
+    <footer class="footer"><span>小さな寄り道が、今日をちょっと特別に。</span><a href="/">アプリ一覧へ ↗</a></footer>
+  </main>
+
+  <script>
+    const form = document.getElementById('tripForm');
+    const resultSection = document.getElementById('resultSection');
+    const loadingState = document.getElementById('loadingState');
+    const errorState = document.getElementById('errorState');
+    const planResult = document.getElementById('planResult');
+    const submitButton = document.getElementById('submitButton');
+    let currentPlan = null;
+    let currentConditions = null;
+
+    const icons = { '食事': '🥢', 'カフェ': '☕', '散策': '🚶', '自然': '🌿', '文化': '🏛️', '買い物': '🛍️', '体験': '✨', '休憩': '☁️' };
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const values = new FormData(form);
+      currentConditions = {
+        area: values.get('area').trim(),
+        hours: Number(values.get('hours')),
+        budget: Number(values.get('budget')),
+        style: values.get('style'),
+        request: values.get('request').trim()
+      };
+      setView('loading');
+      submitButton.disabled = true;
+      resultSection.hidden = false;
+
+      try {
+        const response = await fetch('/api/trip', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(currentConditions)
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || '通信に失敗しました。');
+
+        // server.js が OpenAI のJSON文字列を JSON.parse() で読み取り、
+        // 返された構造化データから旅程UIを組み立てる。
+        const itinerary = payload.data;
+        if (!Array.isArray(itinerary) || itinerary.length < 3 || itinerary.some(stop =>
+          !stop || ['time', 'title', 'description', 'location', 'estimatedCost', 'category', 'tip']
+            .some(key => typeof stop[key] !== 'string' || !stop[key].trim()))) {
+          throw new Error('生成データの形式が正しくありません。もう一度お試しください。');
+        }
+        currentPlan = itinerary;
+        renderPlan(itinerary, currentConditions);
+        setView('result');
+      } catch (error) {
+        document.getElementById('errorMessage').textContent = error.message;
+        setView('error');
+      } finally {
+        submitButton.disabled = false;
+      }
+    });
+
+    function setView(view) {
+      resultSection.hidden = view === 'hidden';
+      loadingState.hidden = view !== 'loading';
+      errorState.hidden = view !== 'error';
+      planResult.hidden = view !== 'result';
+    }
+
+    function renderPlan(stops, conditions) {
+      document.getElementById('resultArea').textContent = conditions.area;
+      document.getElementById('resultSummary').textContent = `${conditions.hours}時間のおでかけ · ${conditions.style}`;
+      const meta = document.getElementById('planMeta');
+      meta.replaceChildren();
+      [`◷ ${conditions.hours}時間`, `￥ 予算 ${conditions.budget.toLocaleString('ja-JP')}円`, `✦ ${stops.length}スポット`].forEach(text => {
+        const chip = document.createElement('span'); chip.className = 'meta-chip'; chip.textContent = text; meta.append(chip);
+      });
+
+      const timeline = document.getElementById('timeline');
+      timeline.replaceChildren();
+      stops.forEach((stop, index) => {
+        const card = document.createElement('article'); card.className = 'stop-card';
+        const marker = document.createElement('div'); marker.className = 'stop-marker'; marker.textContent = icons[stop.category] || '✦';
+        const body = document.createElement('div'); body.className = 'stop-body';
+        const top = document.createElement('div'); top.className = 'stop-topline';
+        const time = document.createElement('span'); time.className = 'stop-time'; time.textContent = stop.time;
+        const category = document.createElement('span'); category.className = 'stop-category'; category.textContent = stop.category;
+        top.append(time, category);
+        const title = document.createElement('h3'); title.textContent = stop.title;
+        const location = document.createElement('p'); location.className = 'stop-location'; location.textContent = `⌖ ${stop.location}`;
+        const description = document.createElement('p'); description.className = 'stop-description'; description.textContent = stop.description;
+        const tip = document.createElement('p'); tip.className = 'stop-tip'; tip.textContent = `✳ ${stop.tip}`;
+        const cost = document.createElement('span'); cost.className = 'stop-cost'; cost.textContent = stop.estimatedCost;
+        body.append(top, title, location, description, tip);
+        card.append(marker, body, cost);
+        timeline.append(card);
+      });
+      document.getElementById('jsonOutput').textContent = JSON.stringify({ itinerary: stops }, null, 2);
+      resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    document.getElementById('copyButton').addEventListener('click', async () => {
+      if (!currentPlan) return;
+      const text = currentPlan.map(stop => `${stop.time}　${stop.title}（${stop.location}）\n${stop.description}\n目安 ${stop.estimatedCost} · ${stop.tip}`).join('\n\n');
+      const buttonLabel = document.querySelector('#copyButton span');
+      try {
+        await navigator.clipboard.writeText(`${currentConditions.area}のよりみちプラン\n\n${text}`);
+        buttonLabel.textContent = 'コピーしました';
+        setTimeout(() => { buttonLabel.textContent = 'プランをコピー'; }, 1800);
+      } catch {
+        buttonLabel.textContent = 'コピーできませんでした';
+        setTimeout(() => { buttonLabel.textContent = 'プランをコピー'; }, 1800);
+      }
+    });
+  </script>
+</body>
+</html>
